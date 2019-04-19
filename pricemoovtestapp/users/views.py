@@ -1,6 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.forms import ModelForm
 from users.models import User
+from django.http import HttpResponse
+from django.views.generic import ListView, DetailView
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
+
 
 
 class UserForm(ModelForm):
@@ -8,33 +13,24 @@ class UserForm(ModelForm):
         model = User
         fields = '__all__'
 
+class UserList(ListView):
+    model = User
 
-def user_list(request):
-    users = User.objects.all()
-    return render(request, 'user_list.html', {'users': users})
+class UserView(DetailView):
+    model = User
 
+class UserCreate(CreateView):
+    model = User
+    fields = ['first_name', 'last_name', 'login', 'email', 'job_title']
+    success_url = reverse_lazy('user_list')
 
-def user_create(request):
-    if request.POST:
-        form = UserForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('users.views.user_list')
-    else:
-        form = UserForm()
-    return render(request, 'user_create.html', {'form': form})
+class UserUpdate(UpdateView):
+    model = User
+    fields = ['first_name', 'last_name', 'login', 'email', 'job_title']
+    success_url = reverse_lazy('user_list')
 
-
-def user_update(request, id_user):
-    user = get_object_or_404(User, id=id_user)
-    form = UserForm(request.POST or None, instance=user)
-    if form.is_valid():
-        form.save()
-        return redirect('users.views.user_list')
-    return render(request, "user_create.html", {'form': form})
+class UserDelete(DeleteView):
+    model = User
+    success_url = reverse_lazy('user_list')
 
 
-def user_delete(request, id_user):
-    user = User.objects.get(id=id_user)
-    user.delete()
-    return redirect('users.views.user_list')

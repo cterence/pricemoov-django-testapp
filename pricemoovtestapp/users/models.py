@@ -8,3 +8,9 @@ class User(models.Model):
     login = models.CharField(max_length=200, unique=True)
     email = models.CharField(max_length=200, unique=True)
     job_title = models.CharField(max_length=200)
+
+    def __str__(self):
+        return self.login
+
+    def get_absolute_url(self):
+        return reverse('user_edit', kwargs={'login': self.login})
