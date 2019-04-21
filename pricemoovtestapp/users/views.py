@@ -143,6 +143,8 @@ def user_update(request, pk, template_name='users/user_form.html'):
     if (current_user.is_admin):
         user= get_object_or_404(User, pk=pk)
         form = UserForm(request.POST or None, instance=user)
+        if (current_user.id == pk): # Prevent an admin to remove his privileges
+            form.fields.pop('is_admin')
         if form.is_valid():
             form.save()
             return redirect('user_list')
@@ -174,3 +176,17 @@ def user_delete(request, pk, template_name='users/user_confirm_delete.html'):
 
     else :
         return HttpResponseForbidden('You don\'t have the privileges to delete an user.')
+
+def first_user(request, template_name='users/user_form.html'):
+    user = User.objects.all()
+    if (user) :
+        return HttpResponseForbidden('You can\'t create a first user when there is already an user in the database.')
+    else :
+        form = UserForm(request.POST or None)
+        if form.is_valid():
+            instance = form.save(commit=False)
+            instance.is_admin = True
+            instance.save()
+            return redirect('user_list')
+        form.fields.pop('is_admin')
+        return render(request, template_name, {'form': form})
