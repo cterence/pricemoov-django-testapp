@@ -9,3 +9,4 @@ class User(models.Model):
     password = models.CharField(max_length=200)
     email = models.EmailField(max_length=200, unique=True)
     job_title = models.CharField(max_length=200)
+    is_admin = models.BooleanField(default=False)

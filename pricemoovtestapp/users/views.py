@@ -6,6 +6,8 @@ import base64, jwt, json, datetime
 from rest_framework import status, exceptions, views
 from rest_framework.response import Response
 
+dev = False
+
 class UserForm(ModelForm):
     class Meta:
         model = User
@@ -45,78 +47,129 @@ class Login(views.APIView):
 
 def basic_or_jwt_auth_required(view):
     def _decorator(request, *args, **kwargs):
-        if ('HTTP_AUTHORIZATION') in request.META :
-            try :
-                auth_method, credentials = request.META['HTTP_AUTHORIZATION'].split(' ', 1)
-            except ValueError :
-                return HttpResponse({"Missing credentials"}, status="400")
-            if auth_method.lower() == 'basic': # Basic method
-                credentials = base64.b64decode(credentials.strip())
-                login, password = credentials.decode().split(':', 1)
+        if (dev == False) :
+            if ('HTTP_AUTHORIZATION') in request.META :
                 try :
-                    User.objects.get(login = login, password = password)
-                    return view(request, *args, **kwargs)
-                except Exception:
-                    return HttpResponseForbidden('Incorrect user credentials.')
-            elif auth_method.lower() == 'bearer': # JWT method
-                try:
-                    payload = jwt.decode(credentials, "SECRET_KEY")
-                    id = payload['id']
-                    first_name = payload['first_name']
-                    last_name = payload['last_name']
-                    User.objects.get(
-                        id=id,
-                        first_name=first_name,
-                        last_name=last_name
-                    )
-                    return view(request, *args, **kwargs)
+                    auth_method, credentials = request.META['HTTP_AUTHORIZATION'].split(' ', 1)
+                except ValueError :
+                    return HttpResponse({"Missing credentials"}, status="400")
+                if auth_method.lower() == 'basic': # Basic method
+                    credentials = base64.b64decode(credentials.strip())
+                    login, password = credentials.decode().split(':', 1)
+                    try :
+                        User.objects.get(login = login, password = password)
+                        return view(request, *args, **kwargs)
+                    except Exception:
+                        return HttpResponseForbidden('Incorrect user credentials.')
+                elif auth_method.lower() == 'bearer': # JWT method
+                    try:
+                        payload = jwt.decode(credentials, "SECRET_KEY")
+                        id = payload['id']
+                        first_name = payload['first_name']
+                        last_name = payload['last_name']
+                        User.objects.get(
+                            id=id,
+                            first_name=first_name,
+                            last_name=last_name
+                        )
+                        return view(request, *args, **kwargs)
 
-                except jwt.DecodeError or jwt.InvalidTokenError or jwt.InvalidSignatureError:
-                    return HttpResponse({"Token is invalid"}, status="403")
-                except jwt.ExpiredSignatureError:
-                    return HttpResponse({"Token has expired"}, status="403")
-                except User.DoesNotExist:
-                    return HttpResponse({"The user does not exist"}, status="404")
+                    except jwt.DecodeError or jwt.InvalidTokenError or jwt.InvalidSignatureError:
+                        return HttpResponse({"Token is invalid"}, status="403")
+                    except jwt.ExpiredSignatureError:
+                        return HttpResponse({"Token has expired"}, status="403")
+                    except User.DoesNotExist:
+                        return HttpResponse({"The user does not exist"}, status="404")
 
-            response = HttpResponse()
-            response.status_code = 401
-            response['WWW-Authenticate'] = 'Basic or JWT'
-            return response
-        else:
-            response = HttpResponse()
-            response.status_code = 401
-            response['WWW-Authenticate'] = 'Basic or JWT'
-            return response
+                response = HttpResponse()
+                response.status_code = 401
+                response['WWW-Authenticate'] = 'Basic or JWT'
+                return response
+            else:
+                response = HttpResponse()
+                response.status_code = 401
+                response['WWW-Authenticate'] = 'Basic or JWT'
+                return response
+        else :
+            return view(request, *args, **kwargs)
     return _decorator
+
+def get_current_user(request): # Get the current user by the credentials given in the request
+    auth_method, credentials = request.META['HTTP_AUTHORIZATION'].split(' ', 1)
+    if auth_method.lower() == 'basic':  # Basic method
+        credentials = base64.b64decode(credentials.strip())
+        login, password = credentials.decode().split(':', 1)
+        return User.objects.get(login = login, password = password)
+    elif auth_method.lower() == 'bearer':  # JWT method
+        payload = jwt.decode(credentials, "SECRET_KEY")
+        id = payload['id']
+        first_name = payload['first_name']
+        last_name = payload['last_name']
+        return User.objects.get(
+            id=id,
+            first_name=first_name,
+            last_name=last_name
+        )
 
 @basic_or_jwt_auth_required
 def user_list(request, template_name='users/user_list.html'):
-    user = User.objects.all()
-    data = {}
-    data['object_list'] = user
-    return render(request, template_name, data)
+    current_user = get_current_user(request)
+    if (current_user.is_admin) :
+        user = User.objects.all()
+        data = {}
+        data['object_list'] = user
+        return render(request, template_name, data)
+    else :
+        user = User.objects.filter(id = current_user.id)
+        data = {}
+        data['object_list'] = user
+        return render(request, template_name, data)
 
 @basic_or_jwt_auth_required
 def user_create(request, template_name='users/user_form.html'):
-    form = UserForm(request.POST or None)
-    if form.is_valid():
-        form.save()
-        return redirect('user_list')
-    return render(request, template_name, {'form':form})
+    current_user = get_current_user(request)
+    if (current_user.is_admin):
+        form = UserForm(request.POST or None)
+        if form.is_valid():
+            form.save()
+            return redirect('user_list')
+        return render(request, template_name, {'form':form})
+    else :
+        return HttpResponseForbidden('You don\'t have the privileges to create a new user.')
 
 @basic_or_jwt_auth_required
 def user_update(request, pk, template_name='users/user_form.html'):
-    user= get_object_or_404(User, pk=pk)
-    form = UserForm(request.POST or None, instance=user)
-    if form.is_valid():
-        form.save()
-        return redirect('user_list')
-    return render(request, template_name, {'form':form})
+    current_user = get_current_user(request)
+    if (current_user.is_admin):
+        user= get_object_or_404(User, pk=pk)
+        form = UserForm(request.POST or None, instance=user)
+        if form.is_valid():
+            form.save()
+            return redirect('user_list')
+        return render(request, template_name, {'form':form})
+    else :
+        if (pk != current_user.id): # Check if the current user is the user that he wants to edit
+            return HttpResponseForbidden('You don\'t have the privileges to edit an user.')
+        else :
+            user = get_object_or_404(User, pk=pk)
+            form = UserForm(request.POST or None, instance=user)
+            if form.is_valid():
+                form.save()
+                return redirect('user_list')
+            return render(request, template_name, {'form': form})
 
 @basic_or_jwt_auth_required
 def user_delete(request, pk, template_name='users/user_confirm_delete.html'):
-    user= get_object_or_404(User, pk=pk)
-    if request.method=='POST':
-        user.delete()
-        return redirect('user_list')
-    return render(request, template_name, {'object':user})
+    current_user = get_current_user(request)
+    if (current_user.is_admin):
+        if (pk == current_user.id):
+            return HttpResponseForbidden('You can\'t delete your own profile.')
+        else :
+            user= get_object_or_404(User, pk=pk)
+            if request.method=='POST':
+                user.delete()
+                return redirect('user_list')
+            return render(request, template_name, {'object':user})
+
+    else :
+        return HttpResponseForbidden('You don\'t have the privileges to delete an user.')

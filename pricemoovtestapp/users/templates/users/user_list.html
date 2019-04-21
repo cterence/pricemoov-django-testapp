@@ -8,6 +8,7 @@
         <th>Login</th>
         <th>Email</th>
         <th>Job title</th>
+        <th>Admin</th>
         <th>Options</th>
     </tr>
 </thead>
@@ -19,6 +20,7 @@
         <td>{{ user.login }}</td>
         <td>{{ user.email }}</td>
         <td>{{ user.job_title }}</td>
+        <td>{{ user.is_admin }}</td>
         <td><a href="{% url "user_edit" user.id %}">edit</a><br><a href="{% url "user_delete" user.id %}">delete</a></td>
     </tr>
     {% endfor %}
