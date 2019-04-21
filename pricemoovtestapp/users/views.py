@@ -153,6 +153,7 @@ def user_update(request, pk, template_name='users/user_form.html'):
         else :
             user = get_object_or_404(User, pk=pk)
             form = UserForm(request.POST or None, instance=user)
+            form.fields.pop('is_admin') # Prevent the possibility of a non admin user to update his admin field
             if form.is_valid():
                 form.save()
                 return redirect('user_list')
