@@ -3,37 +3,35 @@ from users.models import User
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, HttpResponseForbidden
 import base64, jwt, json, datetime
-from rest_framework import status, exceptions, views
+from rest_framework import views
 from rest_framework.response import Response
-
-dev = False
 
 class UserForm(ModelForm):
     class Meta:
         model = User
         fields = '__all__'
 
-class Login(views.APIView):
-    def post(self, request, *args, **kwargs):
+class Login(views.APIView): # Login class for JWT
+    def post(self, request): # Post entrypoint
         if not request.data:
             return Response({'Error': "Please provide login/password"}, status="400")
 
         login = request.data['login']
         password = request.data['password']
         try:
-            user = User.objects.get(login=login, password=password)
-        except User.DoesNotExist:
+            user = User.objects.get(login=login, password=password) # Try to get an user with provided credentials
+        except User.DoesNotExist: # The user doesn't exist
             return Response({'Error': "Invalid login/password"}, status="400")
         if user:
-            payload = {
+            payload = { # Build the payload
                 'id': user.id,
                 'first_name': user.first_name,
                 'last_name': user.last_name,
-                'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1) # JWT expiration = 1 hour
             }
             jwt_token = {'token': jwt.encode(payload, "SECRET_KEY").decode("utf-8")}
 
-            return HttpResponse(
+            return HttpResponse( # Return the token if all everything is ok
                 json.dumps(jwt_token),
                 status=200,
                 content_type="application/json"
@@ -45,10 +43,10 @@ class Login(views.APIView):
                 content_type="application/json"
             )
 
-def basic_or_jwt_auth_required(view):
+def basic_or_jwt_auth_required(view): # Authentication decorator for both Basic and JWT
     def _decorator(request, *args, **kwargs):
         if (dev == False) :
-            if ('HTTP_AUTHORIZATION') in request.META :
+            if ('HTTP_AUTHORIZATION') in request.META : # Find the HTTP_AUTHORIZATION header in the request
                 try :
                     auth_method, credentials = request.META['HTTP_AUTHORIZATION'].split(' ', 1)
                 except ValueError :
@@ -57,13 +55,13 @@ def basic_or_jwt_auth_required(view):
                     credentials = base64.b64decode(credentials.strip())
                     login, password = credentials.decode().split(':', 1)
                     try :
-                        User.objects.get(login = login, password = password)
+                        User.objects.get(login = login, password = password) # Try to match credentials with those stored in the database
                         return view(request, *args, **kwargs)
                     except Exception:
                         return HttpResponseForbidden('Incorrect user credentials.')
                 elif auth_method.lower() == 'bearer': # JWT method
                     try:
-                        payload = jwt.decode(credentials, "SECRET_KEY")
+                        payload = jwt.decode(credentials, "SECRET_KEY") # Decode the token and try to match the payload with the database
                         id = payload['id']
                         first_name = payload['first_name']
                         last_name = payload['last_name']
@@ -94,7 +92,7 @@ def basic_or_jwt_auth_required(view):
             return view(request, *args, **kwargs)
     return _decorator
 
-def get_current_user(request): # Get the current user by the credentials given in the request
+def get_current_user(request): # Get the current user using the credentials given in the request
     auth_method, credentials = request.META['HTTP_AUTHORIZATION'].split(' ', 1)
     if auth_method.lower() == 'basic':  # Basic method
         credentials = base64.b64decode(credentials.strip())
@@ -112,15 +110,15 @@ def get_current_user(request): # Get the current user by the credentials given i
         )
 
 @basic_or_jwt_auth_required
-def user_list(request, template_name='users/user_list.html'):
+def user_list(request, template_name='users/user_list.html'): # User list viex
     current_user = get_current_user(request)
-    if (current_user.is_admin) :
+    if (current_user.is_admin) : # If admin, list every user
         user = User.objects.all()
         data = {}
         data['object_list'] = user
         return render(request, template_name, data)
     else :
-        user = User.objects.filter(id = current_user.id)
+        user = User.objects.filter(id = current_user.id) # If not admin, list only the current user
         data = {}
         data['object_list'] = user
         return render(request, template_name, data)
@@ -128,7 +126,7 @@ def user_list(request, template_name='users/user_list.html'):
 @basic_or_jwt_auth_required
 def user_create(request, template_name='users/user_form.html'):
     current_user = get_current_user(request)
-    if (current_user.is_admin):
+    if (current_user.is_admin): # Only allow creation when admin
         form = UserForm(request.POST or None)
         if form.is_valid():
             form.save()
@@ -138,9 +136,9 @@ def user_create(request, template_name='users/user_form.html'):
         return HttpResponseForbidden('You don\'t have the privileges to create a new user.')
 
 @basic_or_jwt_auth_required
-def user_update(request, pk, template_name='users/user_form.html'):
+def user_update(request, pk, template_name='users/user_form.html'): # User update route
     current_user = get_current_user(request)
-    if (current_user.is_admin):
+    if (current_user.is_admin): # If admin, allowed to update any user
         user= get_object_or_404(User, pk=pk)
         form = UserForm(request.POST or None, instance=user)
         if (current_user.id == pk): # Prevent an admin to remove his privileges
@@ -162,10 +160,10 @@ def user_update(request, pk, template_name='users/user_form.html'):
             return render(request, template_name, {'form': form})
 
 @basic_or_jwt_auth_required
-def user_delete(request, pk, template_name='users/user_confirm_delete.html'):
+def user_delete(request, pk, template_name='users/user_confirm_delete.html'): # User delete route
     current_user = get_current_user(request)
     if (current_user.is_admin):
-        if (pk == current_user.id):
+        if (pk == current_user.id): # Disallow admin to delete its profile
             return HttpResponseForbidden('You can\'t delete your own profile.')
         else :
             user= get_object_or_404(User, pk=pk)
@@ -174,17 +172,17 @@ def user_delete(request, pk, template_name='users/user_confirm_delete.html'):
                 return redirect('user_list')
             return render(request, template_name, {'object':user})
 
-    else :
+    else : # Disallow any non admin to delete anything
         return HttpResponseForbidden('You don\'t have the privileges to delete an user. ')
 
-def first_user(request, template_name='users/user_form.html'):
-    user = User.objects.all()
-    if (user) :
+def first_user(request, template_name='users/user_form.html'): # First user view
+    user = User.objects.all() # Check if there is any entry in the db
+    if (user) : # Disallow the use of the route if there is an entry
         return HttpResponseForbidden('You can\'t create a first user when there is already an user in the database.')
-    else :
+    else : # Allow the use if the db is empty
         form = UserForm(request.POST or None)
         if form.is_valid():
-            instance = form.save(commit=False)
+            instance = form.save(commit=False) # Force the first user to be an admin
             instance.is_admin = True
             instance.save()
             return redirect('user_list')

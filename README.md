@@ -9,11 +9,11 @@ A few instructions to (normally) make this work
 ## First things first - Initiate
 
 On Linux (tested with Ubuntu 18.04) :  
-In `<project-directory>/pricemoovtestapp/` :  
-- Run `docker-compose run web python manage.py migrate` (you'll may have to use sudo)   
-- Then run `docker-compose up`  
+In the project directory  
+- Run `sudo docker-compose run web python pricemoovtestapp/manage.py migrate && sudo docker-compose up` (you may not have to use `sudo`, in my case I needed to)    
 - Go to `0.0.0.0:8000/users/first` to create the first user (which will be admin by default)  
 - Wander around the routes described below
+
 ## Available routes
 
 All routes are prefixed by `0.0.0.0:8000/users`
@@ -26,6 +26,9 @@ All routes are prefixed by `0.0.0.0:8000/users`
 
 Enjoy
 
+## Comments
+
+There are many ways to manage passwords better than what I did, I assumed that it wasn't necessary in this test case
 
 # [Instructions] Backend Test - Django
 
