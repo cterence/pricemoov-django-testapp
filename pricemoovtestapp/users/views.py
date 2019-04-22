@@ -175,7 +175,7 @@ def user_delete(request, pk, template_name='users/user_confirm_delete.html'):
             return render(request, template_name, {'object':user})
 
     else :
-        return HttpResponseForbidden('You don\'t have the privileges to delete an user.')
+        return HttpResponseForbidden('You don\'t have the privileges to delete an user. ')
 
 def first_user(request, template_name='users/user_form.html'):
     user = User.objects.all()

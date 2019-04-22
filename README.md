@@ -1,4 +1,33 @@
-# Backend Test - Django
+# User management app
+
+Made by Térence Chateigné as a test for Pricemoov internship
+
+# Usage
+
+A few instructions to (normally) make this work
+
+## First things first - Initiate
+
+On Linux (tested with Ubuntu 18.04) :  
+In `<project-directory>/pricemoovtestapp/` :  
+- Run `docker-compose run web python manage.py migrate` (you'll may have to use sudo)   
+- Then run `docker-compose up`  
+- Go to `0.0.0.0:8000/users/first` to create the first user (which will be admin by default)  
+- Wander around the routes described below
+## Available routes
+
+All routes are prefixed by `0.0.0.0:8000/users`
+
+`/first` : create the first user (only available once, when the database is empty)  
+`/new` : create a new user  
+`/edit/<id>` : edit an user  
+`/delete/<id>` : delete an user  
+(POST only) `/login` : get a JWT in exchange of valid credentials
+
+Enjoy
+
+
+# [Instructions] Backend Test - Django
 
 The purpose is to develop an API allowing the management of user in a SaaS application
 

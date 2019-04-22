@@ -1,29 +1,62 @@
-<h1>Users</h1>
-<a href="{% url "user_new" %}">New</a>
-<table border="1">
-<thead>
-    <tr>
-        <th>First Name</th>
-        <th>Last Name</th>
-        <th>Login</th>
-        <th>Email</th>
-        <th>Job title</th>
-        <th>Admin</th>
-        <th>Options</th>
-    </tr>
-</thead>
-<tbody>
-    {% for user in object_list %}
-    <tr>
-        <td>{{ user.first_name }}</td>
-        <td>{{ user.last_name }}</td>
-        <td>{{ user.login }}</td>
-        <td>{{ user.email }}</td>
-        <td>{{ user.job_title }}</td>
-        <td>{{ user.is_admin }}</td>
-        <td><a href="{% url "user_edit" user.id %}">edit</a><br><a href="{% url "user_delete" user.id %}">delete</a></td>
-    </tr>
-    {% endfor %}
-</tbody>
-</table>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+          integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"
+            integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy"
+            crossorigin="anonymous"></script>
+    <title>Users list</title>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-2">Users</h1>
+        <hr class="mt-0 mb-4">
+        <table class="table table-striped">
+            <thead class="thead-light">
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">First Name</th>
+                    <th scope="col">Last Name</th>
+                    <th scope="col">Login</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Job title</th>
+                    <th scope="col">Admin</th>
+                    <th scope="col">Options</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in object_list %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.first_name }}</td>
+                    <td>{{ user.last_name }}</td>
+                    <td>{{ user.login }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.job_title }}</td>
+                    <td>{{ user.is_admin }}</td>
+                    <td>
+                        <a href="{% url "user_edit" user.id %}" class="btn btn-primary btn-sm">Edit</a>
+                        <a href="{% url "user_delete" user.id %}" class="btn btn-primary btn-sm">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+                <tr>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>
+                        <a href="{% url "user_new" %}" class="btn btn-primary btn-sm">Add user</a
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
 
