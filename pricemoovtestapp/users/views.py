@@ -45,51 +45,48 @@ class Login(views.APIView): # Login class for JWT
 
 def basic_or_jwt_auth_required(view): # Authentication decorator for both Basic and JWT
     def _decorator(request, *args, **kwargs):
-        if (dev == False) :
-            if ('HTTP_AUTHORIZATION') in request.META : # Find the HTTP_AUTHORIZATION header in the request
+        if ('HTTP_AUTHORIZATION') in request.META : # Find the HTTP_AUTHORIZATION header in the request
+            try :
+                auth_method, credentials = request.META['HTTP_AUTHORIZATION'].split(' ', 1)
+            except ValueError :
+                return HttpResponse({"Missing credentials"}, status="400")
+            if auth_method.lower() == 'basic': # Basic method
+                credentials = base64.b64decode(credentials.strip())
+                login, password = credentials.decode().split(':', 1)
                 try :
-                    auth_method, credentials = request.META['HTTP_AUTHORIZATION'].split(' ', 1)
-                except ValueError :
-                    return HttpResponse({"Missing credentials"}, status="400")
-                if auth_method.lower() == 'basic': # Basic method
-                    credentials = base64.b64decode(credentials.strip())
-                    login, password = credentials.decode().split(':', 1)
-                    try :
-                        User.objects.get(login = login, password = password) # Try to match credentials with those stored in the database
-                        return view(request, *args, **kwargs)
-                    except Exception:
-                        return HttpResponseForbidden('Incorrect user credentials.')
-                elif auth_method.lower() == 'bearer': # JWT method
-                    try:
-                        payload = jwt.decode(credentials, "SECRET_KEY") # Decode the token and try to match the payload with the database
-                        id = payload['id']
-                        first_name = payload['first_name']
-                        last_name = payload['last_name']
-                        User.objects.get(
-                            id=id,
-                            first_name=first_name,
-                            last_name=last_name
-                        )
-                        return view(request, *args, **kwargs)
+                    User.objects.get(login = login, password = password) # Try to match credentials with those stored in the database
+                    return view(request, *args, **kwargs)
+                except Exception:
+                    return HttpResponseForbidden('Incorrect user credentials.')
+            elif auth_method.lower() == 'bearer': # JWT method
+                try:
+                    payload = jwt.decode(credentials, "SECRET_KEY") # Decode the token and try to match the payload with the database
+                    id = payload['id']
+                    first_name = payload['first_name']
+                    last_name = payload['last_name']
+                    User.objects.get(
+                        id=id,
+                        first_name=first_name,
+                        last_name=last_name
+                    )
+                    return view(request, *args, **kwargs)
 
-                    except jwt.DecodeError or jwt.InvalidTokenError or jwt.InvalidSignatureError:
-                        return HttpResponse({"Token is invalid"}, status="403")
-                    except jwt.ExpiredSignatureError:
-                        return HttpResponse({"Token has expired"}, status="403")
-                    except User.DoesNotExist:
-                        return HttpResponse({"The user does not exist"}, status="404")
+                except jwt.DecodeError or jwt.InvalidTokenError or jwt.InvalidSignatureError:
+                    return HttpResponse({"Token is invalid"}, status="403")
+                except jwt.ExpiredSignatureError:
+                    return HttpResponse({"Token has expired"}, status="403")
+                except User.DoesNotExist:
+                    return HttpResponse({"The user does not exist"}, status="404")
 
-                response = HttpResponse()
-                response.status_code = 401
-                response['WWW-Authenticate'] = 'Basic or JWT'
-                return response
-            else:
-                response = HttpResponse()
-                response.status_code = 401
-                response['WWW-Authenticate'] = 'Basic or JWT'
-                return response
-        else :
-            return view(request, *args, **kwargs)
+            response = HttpResponse()
+            response.status_code = 401
+            response['WWW-Authenticate'] = 'Basic or JWT'
+            return response
+        else:
+            response = HttpResponse()
+            response.status_code = 401
+            response['WWW-Authenticate'] = 'Basic or JWT'
+            return response
     return _decorator
 
 def get_current_user(request): # Get the current user using the credentials given in the request
